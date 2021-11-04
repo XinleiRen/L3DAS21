@@ -5,10 +5,10 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 '''
-implemention of 'A NEURAL BEAMFORMING NETWORK FOR B-FORMAT 3D SPEECH ENHANCEMENT AND RECOGNITION'
+A pytorch implementation of the neural beamforming network described in 'A NEURAL BEAMFORMING NETWORK FOR B-FORMAT 3D SPEECH ENHANCEMENT AND RECOGNITION'
 '''
 
-class MIMO_UNet_beamforming(nn.Module):
+class MIMO_UNet_Beamforming(nn.Module):
     def __init__(self,
                 fft_size=512,
                 hop_size=128,
@@ -17,7 +17,7 @@ class MIMO_UNet_beamforming(nn.Module):
                 kernel_size=[(7,1),(1,7),(8,6),(7,6),(6,5),(5,5),(6,3),(5,3),(6,3),(5,3)],
                 stride=[(1,1),(1,1),(2,2),(1,1),(2,2),(1,1),(2,2),(1,1),(2,1),(1,1)]
                 ):
-        super(MIMO_UNet_beamforming, self).__init__()
+        super(MIMO_UNet_Beamforming, self).__init__()
         self.fft_size = fft_size
         self.hop_size = hop_size
         self.win_size = fft_size
@@ -112,18 +112,18 @@ class MIMO_UNet_beamforming(nn.Module):
 
         return (p_t_0, p_t_1, p_f_0, p_f_1)
     
-    def decode_padding_size(self, kernel_size, target_kernel_size):
-        k_f, k_t = kernel_size
-        tk_f, tk_t = target_kernel_size
-        p_t_s = int(abs(tk_t - k_t) / 2)
-        p_f_s = int(abs(tk_f - k_f) / 2)
+    def decode_padding_size(self, in_size, target_size):
+        i_f, i_t = in_size
+        t_f, t_t = target_size
+        p_t_s = int(abs(t_t - i_t) / 2)
+        p_f_s = int(abs(t_f - i_f) / 2)
         
         p_t_0, p_t_1, p_f_0, p_f_1 = (p_t_s, p_t_s, p_f_s, p_f_s)
         
-        if abs(tk_t - k_t) % 2 == 1:
+        if abs(t_t - i_t) % 2 == 1:
             p_t_1 = p_t_1 + 1
         
-        if abs(tk_f - k_f) % 2 == 1:
+        if abs(t_f - i_f) % 2 == 1:
             p_f_1 = p_f_1 + 1
             
         return (p_t_0, p_t_1, p_f_0, p_f_1)
@@ -205,11 +205,12 @@ class MIMO_UNet_beamforming(nn.Module):
 
 if __name__ == '__main__':
     '''
-    the frame number input to the model must be a mulyiple of 8, here it's 600
-    because the torch.stft pads four extra frames based on our configurations, 
-    so the frame number of the signal is 596 actually, ie. the duration of the 
-    signal is 4.792 seconds.
-    the frequency bin input to the model must be a multiple of 16, here it's 256
+    The frame number input to the model must be a multiple of 8, here it's 600.
+    Because the torch.stft pads 4 extra frames based on our configurations, the
+    frame number of the signal is 596 actually, ie. the duration of the signal 
+    is 4.792 seconds(76672 sample), while the fft_size is 512, hop_size is 128, 
+    and the sample_rate is 16000.
+    The frequency bin input to the model must be a multiple of 16, here it's 256.
     '''
     frames_num = 600
     fft_size = 512
@@ -219,7 +220,7 @@ if __name__ == '__main__':
     length = int((frames_num - 1) * hop_size + fft_size - 4 * hop_size) # 4.792 seconds
     inputs = torch.rand(batch_size,audio_channel,length)
 
-    model = MIMO_UNet_beamforming()
+    model = MIMO_UNet_Beamforming()
     out = model(inputs, 'cpu')
     print('input size:', inputs.size())
     print('out size:', out.size())
